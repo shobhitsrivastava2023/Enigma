@@ -152,24 +152,19 @@ export default function EnigmaForm() {
       setInputFocused(true);
     }
 
-    // Handle space or regular key
     const inputChar = key === "SPACE" ? " " : key;
     setActiveKey(inputChar);
 
-    let encrypted = "";
     if (inputChar === " ") {
-      encrypted = " ";
       setInputText((prev) => prev + inputChar);
-      setOutputText((prev) => prev + encrypted);
+      // Do not update output here directly for space, rely on handleInputChange
     } else if (!isDecryptMode) {
-      encrypted = encryptLetter(key);
+      const encrypted = encryptLetter(key);
       setEncryptedKey(encrypted);
       setInputText((prev) => prev + inputChar);
       setOutputText((prev) => prev + encrypted);
     }
 
-
-    // Clear the active keys after animation
     setTimeout(() => {
       setActiveKey(null);
       setTimeout(() => setEncryptedKey(null), 200);
