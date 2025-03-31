@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { ChevronDown, ChevronUp, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -28,8 +28,8 @@ export default function EnigmaForm() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
-  const [inputFocused, setInputFocused] = useState(true)
-  const [outputFocused, setOutputFocused] = useState(true)
+  const [inputFocused, setInputFocused] = useState(false) // Changed initial state to false
+  const [outputFocused, setOutputFocused] = useState(false) // Changed initial state to false
   const [showCursor, setShowCursor] = useState(true)
 
   // Enigma settings
@@ -54,7 +54,7 @@ export default function EnigmaForm() {
     const cursorInterval = setInterval(() => {
       setShowCursor(prev => !prev)
     }, 750) // Longer blink duration as requested
-    
+
     return () => clearInterval(cursorInterval)
   }, [])
 
@@ -102,58 +102,70 @@ export default function EnigmaForm() {
     [enigmaMachine, rotorPositions, reflectorName, selectedRotors, ringSettings],
   )
 
-  // Handle keyboard input
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      let key = e.key
-      if (key === " ") {
-        key = " "
-        setActiveKey(key)
-        if (!isDecryptMode) {
-          const encrypted = encryptLetter(key)
-          setEncryptedKey(encrypted)
-          setInputText((prev) => prev + key)
-          setOutputText((prev) => prev + encrypted)
+  const inputRef = useRef<HTMLDivElement>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
+
+
+    // Handle keyboard input
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (!inputFocused) return; // Only process key events if input is focused
+
+        let key = e.key;
+        if (key === " ") {
+          key = " ";
+          setActiveKey(key);
+          if (!isDecryptMode) {
+            const encrypted = encryptLetter(key);
+            setEncryptedKey(encrypted);
+            setInputText((prev) => prev + key);
+            setOutputText((prev) => prev + encrypted);
+          }
+        } else if (key === "Backspace") {
+          setInputText((prev) => prev.slice(0, -1));
+          setOutputText((prev) => prev.slice(0, -1));
+          setEnigmaHistory((prevHistory) => prevHistory.slice(0, -1)); // also remove last history
+        } else if (/^[A-Z]$/i.test(key)) {
+          key = key.toUpperCase();
+          setActiveKey(key);
+          if (!isDecryptMode) {
+            const encrypted = encryptLetter(key);
+            setEncryptedKey(encrypted);
+            setInputText((prev) => prev + key);
+            setOutputText((prev) => prev + encrypted);
+          }
         }
-      } else if (key === "Backspace") {
-        setInputText((prev) => prev.slice(0, -1))
-        setOutputText((prev) => prev.slice(0, -1))
-        setEnigmaHistory((prevHistory) => prevHistory.slice(0, -1)) // also remove last history
-      } else if (/^[A-Z]$/i.test(key)) {
-        key = key.toUpperCase()
-        setActiveKey(key)
-        if (!isDecryptMode) {
-          const encrypted = encryptLetter(key)
-          setEncryptedKey(encrypted)
-          setInputText((prev) => prev + key)
-          setOutputText((prev) => prev + encrypted)
+      };
+  
+      const preventSpaceScroll = (e: KeyboardEvent) => {
+        if (e.key === " ") {
+          e.preventDefault();
         }
-      }
-    }
-  const preventSpaceScroll = (e: KeyboardEvent) => {
-    if (e.key === " ") {
-    e.preventDefault();
-    }
-  };
+      };
+  
+      window.addEventListener("keydown", preventSpaceScroll);
+  
+      const handleKeyUp = () => {
+        setActiveKey(null);
+        setTimeout(() => setEncryptedKey(null), 200);
+      };
+  
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+  
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+        window.removeEventListener("keydown", preventSpaceScroll);
+      };
+    }, [encryptLetter, isDecryptMode, inputFocused]); // Added inputFocused dependency
 
-  window.addEventListener("keydown", preventSpaceScroll);
-
-    const handleKeyUp = () => {
-      setActiveKey(null)
-      setTimeout(() => setEncryptedKey(null), 200)
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("keyup", handleKeyUp)
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("keyup", handleKeyUp)
-    }
-  }, [encryptLetter, isDecryptMode])
 
   // Handle clicking on keyboard keys
   const handleKeyClick = (key: string) => {
+    if (!inputFocused) {
+      setInputFocused(true); // Focus input if keyboard key is clicked but input is not focused
+    }
     setActiveKey(key)
     const encrypted = encryptLetter(key)
     setEncryptedKey(encrypted)
@@ -175,16 +187,28 @@ export default function EnigmaForm() {
     return (
       <div className="flex flex-col items-center gap-2">
         {isOutput ? (
-          <div 
+          <div
+            ref={outputRef}
             className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
-            onClick={() => setOutputFocused(true)}
+            onClick={() => {
+              setOutputFocused(true);
+              setInputFocused(false); // Ensure only output is focused
+            }}
+            tabIndex={0} // Make the div focusable
+            onBlur={() => setOutputFocused(false)} // Remove focus when blurred
           >
             {encryptedKey || (outputFocused && showCursor ? "|" : "")}
           </div>
         ) : (
-          <div 
+          <div
+            ref={inputRef}
             className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
-            onClick={() => setInputFocused(true)}
+            onClick={() => {
+              setInputFocused(true);
+              setOutputFocused(false); // Ensure only input is focused
+            }}
+            tabIndex={0} // Make the div focusable
+            onBlur={() => setInputFocused(false)} // Remove focus when blurred
           >
             {activeKey || (inputFocused && showCursor ? "|" : "")}
           </div>
@@ -292,7 +316,7 @@ export default function EnigmaForm() {
           setRotorPositions([
             newEnigma.getLeftRotorPosition(),
             newEnigma.getMiddleRotorPosition(),
-    newEnigma.getRightRotorPosition(),
+            newEnigma.getRightRotorPosition(),
           ])
           setEnigmaMachine(newEnigma)
         }
@@ -315,7 +339,7 @@ export default function EnigmaForm() {
         setOutputFocused(false)
       }
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
