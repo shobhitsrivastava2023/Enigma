@@ -92,9 +92,9 @@ export default function EnigmaForm() {
 
       // Update rotor positions locally
       setRotorPositions([
-        enigmaMachine.leftRotor.rotorPosition,
-        enigmaMachine.middleRotor.rotorPosition,
-        enigmaMachine.rightRotor.rotorPosition,
+        enigmaMachine.getLeftRotorPosition(),
+        enigmaMachine.getMiddleRotorPosition(),
+        enigmaMachine.getRightRotorPosition(),
       ])
 
       return encryptedChar
@@ -130,6 +130,13 @@ export default function EnigmaForm() {
         }
       }
     }
+  const preventSpaceScroll = (e: KeyboardEvent) => {
+    if (e.key === " ") {
+    e.preventDefault();
+    }
+  };
+
+  window.addEventListener("keydown", preventSpaceScroll);
 
     const handleKeyUp = () => {
       setActiveKey(null)
@@ -272,17 +279,20 @@ export default function EnigmaForm() {
           const newEnigma = new EnigmaMachine(config)
 
           // Advance the Enigma Machine, step by step
+          // @ts-ignore
           newEnigma.leftRotor.rotorPosition = entry.enigmaState.rotorPositions[0]
+          // @ts-ignore
           newEnigma.middleRotor.rotorPosition = entry.enigmaState.rotorPositions[1]
+          // @ts-ignore
           newEnigma.rightRotor.rotorPosition = entry.enigmaState.rotorPositions[2]
 
           decryptedText += newEnigma.encryptChar(entry.encrypted)
 
           // Update local states
           setRotorPositions([
-            newEnigma.leftRotor.rotorPosition,
-            newEnigma.middleRotor.rotorPosition,
-            newEnigma.rightRotor.rotorPosition,
+            newEnigma.getLeftRotorPosition(),
+            newEnigma.getMiddleRotorPosition(),
+    newEnigma.getRightRotorPosition(),
           ])
           setEnigmaMachine(newEnigma)
         }

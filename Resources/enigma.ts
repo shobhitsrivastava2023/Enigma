@@ -104,4 +104,15 @@ export class EnigmaMachine {
         }
         return output;
     }
+    public getLeftRotorPosition(): number {
+        return this.leftRotor.rotorPosition;
+    }
+
+    public getMiddleRotorPosition(): number {
+        return this.middleRotor.rotorPosition;
+    }
+
+    public getRightRotorPosition(): number {
+        return this.rightRotor.rotorPosition;
+    }
 }
