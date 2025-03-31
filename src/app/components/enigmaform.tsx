@@ -103,7 +103,7 @@ export default function EnigmaForm() {
   )
 
   const inputRef = useRef<HTMLDivElement>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
+  const outputRef = useRef<HTMLInputElement>(null);
 
 
     // Handle keyboard input
@@ -183,22 +183,35 @@ export default function EnigmaForm() {
       ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
       ["Z", "X", "C", "V", "B", "N", "M"],
     ]
+    const focusInput = () => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        // Force keyboard on mobile
+        if (/Mobi|Android/i.test(navigator.userAgent)) {
+          setTimeout(() => {
+            inputRef.current?.click();
+          }, 100);
+        }
+      }
+    };
 
     return (
       <div className="flex flex-col items-center gap-2">
         {isOutput ? (
-          <div
+          <div className="relative w-full">
+          <input 
+            type="text"
+            className="opacity-0 absolute h-full w-full"
             ref={outputRef}
-            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
-            onClick={() => {
-              setOutputFocused(true);
-              setInputFocused(false); // Ensure only output is focused
-            }}
-            tabIndex={0} // Make the div focusable
-            onBlur={() => setOutputFocused(false)} // Remove focus when blurred
-          >
-            {encryptedKey || (outputFocused && showCursor ? "|" : "")}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+          />
+          <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
+            {activeKey || (inputFocused && showCursor ? "|" : "")}
           </div>
+        </div>
         ) : (
           <div
             ref={inputRef}
