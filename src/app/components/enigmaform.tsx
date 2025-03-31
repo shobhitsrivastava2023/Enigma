@@ -165,7 +165,7 @@ export default function EnigmaForm() {
         ) : (
           <input
             type="text"
-            readOnly // Prevent direct user input
+      
             className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-lg font-mono h-14 flex items-center justify-center"
             value={activeKey || ""}
           />
