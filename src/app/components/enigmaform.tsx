@@ -102,7 +102,7 @@ export default function EnigmaForm() {
     [enigmaMachine, rotorPositions, reflectorName, selectedRotors, ringSettings],
   )
 
-  const inputRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLInputElement>(null);
 
 
@@ -202,7 +202,7 @@ export default function EnigmaForm() {
           <input 
             type="text"
             className="opacity-0 absolute h-full w-full"
-            ref={outputRef}
+            ref={inputRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onFocus={() => setInputFocused(true)}
