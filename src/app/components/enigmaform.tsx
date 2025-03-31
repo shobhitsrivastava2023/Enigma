@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ChevronDown, ChevronUp, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -28,9 +28,6 @@ export default function EnigmaForm() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
-  const [inputFocused, setInputFocused] = useState(false)
-  const [outputFocused, setOutputFocused] = useState(false)
-  const [showCursor, setShowCursor] = useState(true)
 
   // Enigma settings
   const [rotorPositions, setRotorPositions] = useState([2, 3, 1])
@@ -48,15 +45,6 @@ export default function EnigmaForm() {
   // Decryption Mode
   const [isDecryptMode, setIsDecryptMode] = useState(false)
   const [decryptionHistory, setDecryptionHistory] = useState<EnigmaHistoryEntry[]>([])
-
-  // Blinking cursor effect
-  useEffect(() => {
-    const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev)
-    }, 750) // Longer blink duration as requested
-
-    return () => clearInterval(cursorInterval)
-  }, [])
 
   // Initialize Enigma Machine
   useEffect(() => {
@@ -102,73 +90,60 @@ export default function EnigmaForm() {
     [enigmaMachine, rotorPositions, reflectorName, selectedRotors, ringSettings],
   )
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const outputRef = useRef<HTMLInputElement>(null);
-
-  // Only keep the space scroll prevention
+  // Handle keyboard input
   useEffect(() => {
-    const preventSpaceScroll = (e: KeyboardEvent) => {
-      if (e.key === " ") {
-        e.preventDefault();
-      }
-    };
-
-    window.addEventListener("keydown", preventSpaceScroll);
-    return () => {
-      window.removeEventListener("keydown", preventSpaceScroll);
-    };
-  }, []);
-
-  // Update the input handling
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
-    setInputText(value);
-    let newOutputText = "";
-    if (!isDecryptMode && enigmaMachine) {
-      for (let i = 0; i < value.length; i++) {
-        const char = value[i];
-        if (/^[A-Z]$/.test(char)) {
-          setActiveKey(char);
-          const encrypted = encryptLetter(char);
-          setEncryptedKey(encrypted);
-          newOutputText += encrypted;
-        } else if (char === " ") {
-          newOutputText += " ";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      let key = e.key
+      if (key === " ") {
+        key = " "
+        setActiveKey(key)
+        if (!isDecryptMode) {
+          const encrypted = encryptLetter(key)
+          setEncryptedKey(encrypted)
+          setInputText((prev) => prev + key)
+          setOutputText((prev) => prev + encrypted)
+        }
+      } else if (key === "Backspace") {
+        setInputText((prev) => prev.slice(0, -1))
+        setOutputText((prev) => prev.slice(0, -1))
+        setEnigmaHistory((prevHistory) => prevHistory.slice(0, -1)) // also remove last history
+      } else if (/^[A-Z]$/i.test(key)) {
+        key = key.toUpperCase()
+        setActiveKey(key)
+        if (!isDecryptMode) {
+          const encrypted = encryptLetter(key)
+          setEncryptedKey(encrypted)
+          setInputText((prev) => prev + key)
+          setOutputText((prev) => prev + encrypted)
         }
       }
-      setOutputText(newOutputText);
-      setTimeout(() => {
-        setActiveKey(null);
-        setTimeout(() => setEncryptedKey(null), 200);
-      }, 300);
-    } else if (isDecryptMode) {
-      setOutputText(""); // Clear output in decrypt mode, handled by file upload
     }
-  };
+
+    const handleKeyUp = () => {
+      setActiveKey(null)
+      setTimeout(() => setEncryptedKey(null), 200)
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    window.addEventListener("keyup", handleKeyUp)
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("keyup", handleKeyUp)
+    }
+  }, [encryptLetter, isDecryptMode])
 
   // Handle clicking on keyboard keys
   const handleKeyClick = (key: string) => {
-    if (!inputFocused) {
-      setInputFocused(true);
-    }
-
-    const inputChar = key === "SPACE" ? " " : key;
-    setActiveKey(inputChar);
-
-    if (inputChar === " ") {
-      setInputText((prev) => prev + inputChar);
-      // Do not update output here directly for space, rely on handleInputChange
-    } else if (!isDecryptMode) {
-      const encrypted = encryptLetter(key);
-      setEncryptedKey(encrypted);
-      setInputText((prev) => prev + inputChar);
-      setOutputText((prev) => prev + encrypted);
-    }
-
+    setActiveKey(key)
+    const encrypted = encryptLetter(key)
+    setEncryptedKey(encrypted)
+    setInputText((prev) => prev + key)
+    setOutputText((prev) => prev + encrypted)
     setTimeout(() => {
-      setActiveKey(null);
-      setTimeout(() => setEncryptedKey(null), 200);
-    }, 300);
+      setActiveKey(null)
+      setTimeout(() => setEncryptedKey(null), 200)
+    }, 300)
   }
 
   const renderKeyboard = (isOutput = false) => {
@@ -176,55 +151,29 @@ export default function EnigmaForm() {
       ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
       ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
       ["Z", "X", "C", "V", "B", "N", "M"],
-      ["SPACE"] // Add new row for space
-    ]
-    const focusInput = () => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-        // Force keyboard on mobile
-        if (/Mobi|Android/i.test(navigator.userAgent)) {
-          setTimeout(() => {
-            inputRef.current?.click();
-          }, 100);
-        }
-      }
-    };
-
+    ];
+  
     return (
       <div className="flex flex-col items-center gap-2">
         {isOutput ? (
-          <div
-            ref={outputRef}
-            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
-            onClick={() => {
-              setOutputFocused(true);
-              setInputFocused(false); // Ensure only output is focused
-            }}
-            tabIndex={0} // Make the div focusable
-            onBlur={() => setOutputFocused(false)} // Remove focus when blurred
-          >
-            {encryptedKey || (outputFocused && showCursor ? "|" : "")}
-          </div>
+          <input
+            type="text"
+            readOnly // Prevent direct user input
+            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-xl font-mono h-14 flex items-center justify-center"
+            value={encryptedKey || "output lights"}
+          />
         ) : (
-          <div className="relative w-full">
-            <input
-              type="text"
-              className="opacity-0 absolute h-full w-full"
-              ref={inputRef}
-              value={inputText}
-              onChange={handleInputChange}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-            />
-            <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
-              {activeKey || (inputFocused && showCursor ? "|" : "")}
-            </div>
-          </div>
+          <input
+            type="text"
+            readOnly // Prevent direct user input
+            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-lg font-mono h-14 flex items-center justify-center"
+            value={activeKey || ""}
+          />
         )}
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className="flex gap-1 justify-center">
             {row.map((key) => {
-              const isActive = isOutput ? key === encryptedKey : key === activeKey
+              const isActive = isOutput ? key === encryptedKey : key === activeKey;
               return (
                 <button
                   key={key}
@@ -235,13 +184,13 @@ export default function EnigmaForm() {
                 >
                   {key}
                 </button>
-              )
+              );
             })}
           </div>
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   const clearText = () => {
     setInputText("")
@@ -338,20 +287,6 @@ export default function EnigmaForm() {
     reader.readAsText(file)
   }
 
-  // Handle click outside input/output areas to remove focus
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.keyboard-display')) {
-        setInputFocused(false)
-        setOutputFocused(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
   return (
     <>
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
@@ -365,8 +300,8 @@ export default function EnigmaForm() {
         </div>
 
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="flex flex-col items-center keyboard-display">{renderKeyboard(false)}</div>
-          <div className="flex flex-col items-center keyboard-display">{renderKeyboard(true)}</div>
+          <div className="flex flex-col items-center">{renderKeyboard(false)}</div>
+          <div className="flex flex-col items-center">{renderKeyboard(true)}</div>
         </div>
 
         <div className="w-full max-w-4xl">
@@ -464,7 +399,7 @@ export default function EnigmaForm() {
 
               <div className="bg-neutral-800 rounded-md p-3 flex items-center justify-between">
                 <span>Plugboard Connections</span>
-                {/* TODO: Add plugboard setting  (left out on purpose for simplicity) */}
+                {/* TODO: Add plugboard setting  (left out on purpose for simplicity) */}
               </div>
             </div>
           )}
