@@ -198,32 +198,32 @@ export default function EnigmaForm() {
     return (
       <div className="flex flex-col items-center gap-2">
         {isOutput ? (
-          <div className="relative w-full">
-          <input 
-            type="text"
-            className="opacity-0 absolute h-full w-full"
-            ref={inputRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-          />
-          <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
-            {activeKey || (inputFocused && showCursor ? "|" : "")}
-          </div>
-        </div>
-        ) : (
           <div
-            ref={inputRef}
+            ref={outputRef}
             className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
             onClick={() => {
-              setInputFocused(true);
-              setOutputFocused(false); // Ensure only input is focused
+              setOutputFocused(true);
+              setInputFocused(false); // Ensure only output is focused
             }}
             tabIndex={0} // Make the div focusable
-            onBlur={() => setInputFocused(false)} // Remove focus when blurred
+            onBlur={() => setOutputFocused(false)} // Remove focus when blurred
           >
-            {activeKey || (inputFocused && showCursor ? "|" : "")}
+            {encryptedKey || (outputFocused && showCursor ? "|" : "")}
+          </div>
+        ) : (
+          <div className="relative w-full">
+            <input 
+              type="text"
+              className="opacity-0 absolute h-full w-full"
+              ref={inputRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+            />
+            <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
+              {activeKey || (inputFocused && showCursor ? "|" : "")}
+            </div>
           </div>
         )}
         {rows.map((row, rowIndex) => (
