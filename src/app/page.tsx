@@ -12,7 +12,7 @@ const Home: React.FC = () => {
           <div className='bg-[#1F1B24]'>
 
          
-            <h1>Enigma Machine</h1>
+           
             <EnigmaForm onProcess={(message) => setProcessedMessage(message)} />
             {processedMessage && (
                 <div>
