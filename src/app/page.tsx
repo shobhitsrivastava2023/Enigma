@@ -8,7 +8,10 @@ const Home: React.FC = () => {
     const [processedMessage, setProcessedMessage] = useState('');
 
     return (
-        <div>
+        <div className='bg-[#121212] h-screen'>
+          <div className='bg-[#1F1B24]'>
+
+         
             <h1>Enigma Machine</h1>
             <EnigmaForm onProcess={(message) => setProcessedMessage(message)} />
             {processedMessage && (
@@ -17,6 +20,7 @@ const Home: React.FC = () => {
                     <p>{processedMessage}</p>
                 </div>
             )}
+            </div>
         </div>
     );
 };
