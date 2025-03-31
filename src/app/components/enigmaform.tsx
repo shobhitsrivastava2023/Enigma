@@ -28,8 +28,8 @@ export default function EnigmaForm() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
-  const [inputFocused, setInputFocused] = useState(false) // Changed initial state to false
-  const [outputFocused, setOutputFocused] = useState(false) // Changed initial state to false
+  const [inputFocused, setInputFocused] = useState(false)
+  const [outputFocused, setOutputFocused] = useState(false)
   const [showCursor, setShowCursor] = useState(true)
 
   // Enigma settings
@@ -105,76 +105,75 @@ export default function EnigmaForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLInputElement>(null);
 
+  // Only keep the space scroll prevention
+  useEffect(() => {
+    const preventSpaceScroll = (e: KeyboardEvent) => {
+      if (e.key === " ") {
+        e.preventDefault();
+      }
+    };
 
-    // Handle keyboard input
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (!inputFocused) return; // Only process key events if input is focused
+    window.addEventListener("keydown", preventSpaceScroll);
+    return () => {
+      window.removeEventListener("keydown", preventSpaceScroll);
+    };
+  }, []);
 
-        let key = e.key;
-        if (key === " ") {
-          key = " ";
-          setActiveKey(key);
-          if (!isDecryptMode) {
-            const encrypted = encryptLetter(key);
-            setEncryptedKey(encrypted);
-            setInputText((prev) => prev + key);
-            setOutputText((prev) => prev + encrypted);
-          }
-        } else if (key === "Backspace") {
-          setInputText((prev) => prev.slice(0, -1));
-          setOutputText((prev) => prev.slice(0, -1));
-          setEnigmaHistory((prevHistory) => prevHistory.slice(0, -1)); // also remove last history
-        } else if (/^[A-Z]$/i.test(key)) {
-          key = key.toUpperCase();
-          setActiveKey(key);
-          if (!isDecryptMode) {
-            const encrypted = encryptLetter(key);
-            setEncryptedKey(encrypted);
-            setInputText((prev) => prev + key);
-            setOutputText((prev) => prev + encrypted);
-          }
+  // Update the input handling
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setInputText(value);
+    let newOutputText = "";
+    if (!isDecryptMode && enigmaMachine) {
+      for (let i = 0; i < value.length; i++) {
+        const char = value[i];
+        if (/^[A-Z]$/.test(char)) {
+          setActiveKey(char);
+          const encrypted = encryptLetter(char);
+          setEncryptedKey(encrypted);
+          newOutputText += encrypted;
+        } else if (char === " ") {
+          newOutputText += " ";
         }
-      };
-  
-      const preventSpaceScroll = (e: KeyboardEvent) => {
-        if (e.key === " ") {
-          e.preventDefault();
-        }
-      };
-  
-      window.addEventListener("keydown", preventSpaceScroll);
-  
-      const handleKeyUp = () => {
+      }
+      setOutputText(newOutputText);
+      setTimeout(() => {
         setActiveKey(null);
         setTimeout(() => setEncryptedKey(null), 200);
-      };
-  
-      window.addEventListener("keydown", handleKeyDown);
-      window.addEventListener("keyup", handleKeyUp);
-  
-      return () => {
-        window.removeEventListener("keydown", handleKeyDown);
-        window.removeEventListener("keyup", handleKeyUp);
-        window.removeEventListener("keydown", preventSpaceScroll);
-      };
-    }, [encryptLetter, isDecryptMode, inputFocused]); // Added inputFocused dependency
-
+      }, 300);
+    } else if (isDecryptMode) {
+      setOutputText(""); // Clear output in decrypt mode, handled by file upload
+    }
+  };
 
   // Handle clicking on keyboard keys
   const handleKeyClick = (key: string) => {
     if (!inputFocused) {
-      setInputFocused(true); // Focus input if keyboard key is clicked but input is not focused
+      setInputFocused(true);
     }
-    setActiveKey(key)
-    const encrypted = encryptLetter(key)
-    setEncryptedKey(encrypted)
-    setInputText((prev) => prev + key)
-    setOutputText((prev) => prev + encrypted)
+
+    // Handle space or regular key
+    const inputChar = key === "SPACE" ? " " : key;
+    setActiveKey(inputChar);
+
+    let encrypted = "";
+    if (inputChar === " ") {
+      encrypted = " ";
+      setInputText((prev) => prev + inputChar);
+      setOutputText((prev) => prev + encrypted);
+    } else if (!isDecryptMode) {
+      encrypted = encryptLetter(key);
+      setEncryptedKey(encrypted);
+      setInputText((prev) => prev + inputChar);
+      setOutputText((prev) => prev + encrypted);
+    }
+
+
+    // Clear the active keys after animation
     setTimeout(() => {
-      setActiveKey(null)
-      setTimeout(() => setEncryptedKey(null), 200)
-    }, 300)
+      setActiveKey(null);
+      setTimeout(() => setEncryptedKey(null), 200);
+    }, 300);
   }
 
   const renderKeyboard = (isOutput = false) => {
@@ -182,6 +181,7 @@ export default function EnigmaForm() {
       ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
       ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
       ["Z", "X", "C", "V", "B", "N", "M"],
+      ["SPACE"] // Add new row for space
     ]
     const focusInput = () => {
       if (inputRef.current) {
@@ -212,12 +212,12 @@ export default function EnigmaForm() {
           </div>
         ) : (
           <div className="relative w-full">
-            <input 
+            <input
               type="text"
               className="opacity-0 absolute h-full w-full"
               ref={inputRef}
               value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
+              onChange={handleInputChange}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
             />
@@ -469,7 +469,7 @@ export default function EnigmaForm() {
 
               <div className="bg-neutral-800 rounded-md p-3 flex items-center justify-between">
                 <span>Plugboard Connections</span>
-                {/* TODO: Add plugboard setting  (left out on purpose for simplicity) */}
+                {/* TODO: Add plugboard setting  (left out on purpose for simplicity) */}
               </div>
             </div>
           )}
