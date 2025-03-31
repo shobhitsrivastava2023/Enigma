@@ -25,9 +25,12 @@ interface EnigmaHistoryEntry {
 export default function EnigmaForm() {
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [encryptedKey, setEncryptedKey] = useState<string | null>(null)
-  const [advancedOpen, setAdvancedOpen] = useState(true)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
+  const [inputFocused, setInputFocused] = useState(true)
+  const [outputFocused, setOutputFocused] = useState(true)
+  const [showCursor, setShowCursor] = useState(true)
 
   // Enigma settings
   const [rotorPositions, setRotorPositions] = useState([2, 3, 1])
@@ -45,6 +48,15 @@ export default function EnigmaForm() {
   // Decryption Mode
   const [isDecryptMode, setIsDecryptMode] = useState(false)
   const [decryptionHistory, setDecryptionHistory] = useState<EnigmaHistoryEntry[]>([])
+
+  // Blinking cursor effect
+  useEffect(() => {
+    const cursorInterval = setInterval(() => {
+      setShowCursor(prev => !prev)
+    }, 750) // Longer blink duration as requested
+    
+    return () => clearInterval(cursorInterval)
+  }, [])
 
   // Initialize Enigma Machine
   useEffect(() => {
@@ -156,12 +168,18 @@ export default function EnigmaForm() {
     return (
       <div className="flex flex-col items-center gap-2">
         {isOutput ? (
-          <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
-            {encryptedKey || "U"}
+          <div 
+            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
+            onClick={() => setOutputFocused(true)}
+          >
+            {encryptedKey || (outputFocused && showCursor ? "|" : "")}
           </div>
         ) : (
-          <div className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center">
-            {activeKey || "D"}
+          <div 
+            className="w-full bg-neutral-800 rounded-md p-4 mb-4 text-center text-white text-2xl font-mono h-14 flex items-center justify-center"
+            onClick={() => setInputFocused(true)}
+          >
+            {activeKey || (inputFocused && showCursor ? "|" : "")}
           </div>
         )}
         {rows.map((row, rowIndex) => (
@@ -278,6 +296,20 @@ export default function EnigmaForm() {
     reader.readAsText(file)
   }
 
+  // Handle click outside input/output areas to remove focus
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.keyboard-display')) {
+        setInputFocused(false)
+        setOutputFocused(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   return (
     <>
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
@@ -291,8 +323,8 @@ export default function EnigmaForm() {
         </div>
 
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="flex flex-col items-center">{renderKeyboard(false)}</div>
-          <div className="flex flex-col items-center">{renderKeyboard(true)}</div>
+          <div className="flex flex-col items-center keyboard-display">{renderKeyboard(false)}</div>
+          <div className="flex flex-col items-center keyboard-display">{renderKeyboard(true)}</div>
         </div>
 
         <div className="w-full max-w-4xl">
@@ -484,4 +516,3 @@ export default function EnigmaForm() {
     </>
   )
 }
-

@@ -3,6 +3,7 @@
 "use client"
 import React, { useState } from 'react';
 import EnigmaForm from './components/enigmaform';
+import { StackedCircularFooter } from '@/components/ui/stacked-circular-footer';
 
 const Home: React.FC = () => {
     const [processedMessage, setProcessedMessage] = useState('');
@@ -20,6 +21,10 @@ const Home: React.FC = () => {
                     <p>{processedMessage}</p>
                 </div>
             )}
+            </div>
+            <div>
+                <StackedCircularFooter />
+
             </div>
         </div>
     );
